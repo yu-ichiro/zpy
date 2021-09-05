@@ -31,6 +31,7 @@ class Function(Functor[T]):
         self.__applied_args = ""
         self.f = f
         self.__wrapped__ = f
+        self.__signature__ = self.signature
 
     @property
     def __applied_args__(self):
@@ -118,7 +119,7 @@ class Function(Functor[T]):
 
     def partial(self, *args, **kwargs):
         cls = type(self)
-        return cls(partial(self.f, *args, **kwargs), name=self.__name__, applied_args=args, applied_kwargs=kwargs)
+        return cls(partial(self, *args, **kwargs), name=self.__name__, applied_args=args, applied_kwargs=kwargs)
 
     @classmethod
     def pure(cls, m: U) -> "Callable[[T], U]":
