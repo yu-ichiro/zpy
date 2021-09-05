@@ -36,7 +36,7 @@ def reduce(i: U, f: Callable[[U, T], U]) -> "Callable[[Functor[T]], U]":
 
 @Function
 def apply(f: "Applicative[Callable[[T], U]]") -> "Callable[[Applicative[T]], Applicative[U]]":
-    return Function(lambda a: a.apply(f))
+    return Function(lambda a: f.apply(a))
 
 
 @Function
@@ -94,64 +94,71 @@ __all__ = ['abs', 'add', 'and_', 'attrgetter', 'concat', 'contains', 'countOf',
            'mul', 'ne', 'neg', 'not_', 'or_', 'pos', 'pow', 'rshift',
            'setitem', 'sub', 'truediv', 'truth', 'xor']
 
+unary = Signature([
+    Parameter(name="a", kind=Parameter.POSITIONAL_ONLY)
+])
 # unary operator
 # math
-abs = Function(op.abs)
-neg = Function(op.neg)
-pos = Function(op.pos)
-index = Function(op.index)
+abs = Function(op.abs, signature_=unary)
+neg = Function(op.neg, signature_=unary)
+pos = Function(op.pos, signature_=unary)
+index = Function(op.index, signature_=unary)
 
 # bit
-inv = Function(op.inv)
+inv = Function(op.inv, signature_=unary)
 invert = inv
 
 # boolean
-not_ = Function(op.not_)
-truth = Function(op.truth)
+not_ = Function(op.not_, signature_=unary)
+truth = Function(op.truth, signature_=unary)
 
+binary = Signature([
+    Parameter(name="a", kind=Parameter.POSITIONAL_ONLY),
+    Parameter(name="b", kind=Parameter.POSITIONAL_ONLY),
+])
 # binary operator
 # math
-add = Function(op.add)
-sub = Function(op.sub)
-mul = Function(op.mul)
-truediv = Function(op.truediv)
-floordiv = Function(op.floordiv)
-mod = Function(op.mod)
-matmul = Function(op.matmul)
-divmod = Function(divmod)
+add = Function(op.add, signature_=binary)
+sub = Function(op.sub, signature_=binary)
+mul = Function(op.mul, signature_=binary)
+truediv = Function(op.truediv, signature_=binary)
+floordiv = Function(op.floordiv, signature_=binary)
+mod = Function(op.mod, signature_=binary)
+matmul = Function(op.matmul, signature_=binary)
+divmod = Function(divmod, signature_=binary)
 pow = Function(_pow)
 
-iadd = Function(op.iadd)
-isub = Function(op.isub)
-imul = Function(op.imul)
-itruediv = Function(op.itruediv)
-ifloordiv = Function(op.ifloordiv)
-imod = Function(op.imod)
-imatmul = Function(op.imatmul)
-ipow = Function(op.ipow)
+iadd = Function(op.iadd, signature_=binary)
+isub = Function(op.isub, signature_=binary)
+imul = Function(op.imul, signature_=binary)
+itruediv = Function(op.itruediv, signature_=binary)
+ifloordiv = Function(op.ifloordiv, signature_=binary)
+imod = Function(op.imod, signature_=binary)
+imatmul = Function(op.imatmul, signature_=binary)
+ipow = Function(op.ipow, signature_=binary)
 
 # bit
-or_ = Function(op.or_)
-and_ = Function(op.and_)
-xor = Function(op.xor)
-rshift = Function(op.rshift)
-lshift = Function(op.lshift)
+or_ = Function(op.or_, signature_=binary)
+and_ = Function(op.and_, signature_=binary)
+xor = Function(op.xor, signature_=binary)
+rshift = Function(op.rshift, signature_=binary)
+lshift = Function(op.lshift, signature_=binary)
 
-ior = Function(op.ior)
-iand = Function(op.iand)
-ixor = Function(op.ixor)
-irshift = Function(op.irshift)
-ilshift = Function(op.ilshift)
+ior = Function(op.ior, signature_=binary)
+iand = Function(op.iand, signature_=binary)
+ixor = Function(op.ixor, signature_=binary)
+irshift = Function(op.irshift, signature_=binary)
+ilshift = Function(op.ilshift, signature_=binary)
 
 # boolean
-eq = Function(op.eq)
-ne = Function(op.ne)
-gt = Function(op.gt)
-ge = Function(op.ge)
-lt = Function(op.lt)
-le = Function(op.le)
-is_ = Function(op.is_)
-is_not = Function(op.is_not)
+eq = Function(op.eq, signature_=binary)
+ne = Function(op.ne, signature_=binary)
+gt = Function(op.gt, signature_=binary)
+ge = Function(op.ge, signature_=binary)
+lt = Function(op.lt, signature_=binary)
+le = Function(op.le, signature_=binary)
+is_ = Function(op.is_, signature_=binary)
+is_not = Function(op.is_not, signature_=binary)
 
 # object operator
 itemgetter = Function(
@@ -176,14 +183,15 @@ methodcaller = Function(
 )
 
 # sequence operator
-getitem = Function(op.getitem)
-setitem = Function(op.setitem)
-delitem = Function(op.delitem)
-indexOf = Function(op.indexOf)
-concat = Function(op.concat)
-contains = Function(op.contains)
-count_of = Function(op.countOf)
+getitem = Function(op.getitem, signature_=binary)
+setitem = Function(op.setitem, signature_=binary)
+delitem = Function(op.delitem, signature_=binary)
+index_of = Function(op.indexOf, signature_=binary)
+indexOf = index_of
+concat = Function(op.concat, signature_=binary)
+contains = Function(op.contains, signature_=binary)
+count_of = Function(op.countOf, signature_=binary)
 countOf = count_of
-length_hint = Function(op.length_hint)
+length_hint = Function(op.length_hint, signature_=binary)
 
-iconcat = Function(op.iconcat)
+iconcat = Function(op.iconcat, signature_=binary)
