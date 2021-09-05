@@ -10,7 +10,9 @@ class Functor(Generic[T], ABC):
     @abstractmethod
     def map(self, f: Callable[[T], U]) -> "Functor[U]":
         ...
-
+        
+    def __rtruediv__(self, f: Callable[[T], U]) -> "Functor[U]":
+        return self.map(f)
 
 class Cartesian(Generic[T], ABC):
     @abstractmethod
@@ -29,6 +31,10 @@ class Apply(Functor[T], ABC):
     @abstractmethod
     def apply(self: "Apply[Callable[[T], U]]", fa: "Apply[T]") -> "Apply[U]":
         ...
+    
+    def __mul__(self: "Apply[Callable[[T], U]]", fa: "Apply[T]") -> "Apply[U]":
+        return self.apply(fa)
+    
 
 
 class Applicative(Apply[T], ABC):

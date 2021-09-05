@@ -3,7 +3,8 @@ from abc import abstractmethod, ABC
 from itertools import chain
 
 from zpy.bases import Applicative, Cartesian, Functor
-from zpy.operators import add, mul
+from zpy.function import Function
+from zpy.operators import add, mul, map, apply
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -11,6 +12,9 @@ V = TypeVar("V")
 
 
 class Array(Applicative[T], Cartesian[T], list):
+    def __new__(cls, iter_: Iterable[T]):
+        return list.__new__(cls, iter_)
+
     @classmethod
     def pure(cls, m: T) -> "Array[T]":
         return cls([m])
@@ -74,9 +78,9 @@ class Just(Maybe[T]):
         cls = type(self)
         return cls(f(self.m))
 
-    def apply(self, f: "Just[U]") -> "Just[V]":
+    def apply(self, fa: "Just[U]") -> "Just[V]":
         cls = type(self)
-        return cls(f.map(self.m))
+        return fa.map(self.m)
 
     def __repr__(self):
         cls = type(self)
@@ -116,5 +120,11 @@ if __name__ == "__main__":
     # print(Array.pure(add).apply(Array.of(1, 2)).apply(Array.of(1)))
     # print(Just(1).map(add))
     # print(Just.pure(add).apply(Just(1)))
-    print(add)
-    print(add_1)
+    print(Just.pure(add).apply(Just(1)).apply(Just(3)))
+    print(Just(1).map(add).apply(Just(3)))
+    print(apply(apply(Just(add))(Just(3)))(Just(1)))
+    print(add_1 / Just(1))
+    print(mul_4 / Just(5))
+    print(add_1 / mul_4 / Just(5))
+    print(add / Just(3) * Just(5))
+    print(Just(add) * Just(3) * Just(5))

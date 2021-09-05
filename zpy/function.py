@@ -130,8 +130,11 @@ class Function(Functor[T]):
         cls = type(self)
         return cls(
             lambda t: f(self(t)),
-            name=f"{self.__name__}{self.__applied_args__} | {f.__name__}{f.__applied_args__}"
+            name=f"{f.__name__}{f.__applied_args__} / {self.__name__}{self.__applied_args__}"
         )
+        
+    def __truediv__(self: Callable[[T], U], f: Callable[[V], T]) -> Callable[[V], U]:
+        return type(f).__rtruediv__(f, self)
 
     def apply(self: Callable[[T], Callable[[U], V]], f: Callable[[T], U]) -> Callable[[T], V]:
         cls = type(self)
@@ -145,5 +148,3 @@ class Function(Functor[T]):
             name=f"{self.__name__}{self.__applied_args__} * {f.__name__}{f.__applied_args__}"
         )
 
-    def __or__(self: Callable[[T], U], f: Callable[[U], V]) -> Callable[[T], V]:
-        return self.map(f)
