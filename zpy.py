@@ -1,74 +1,16 @@
-from typing import Generic, TypeVar, Callable
-from abc import abstractmethod, abstractclassmethod
-from functools import reduce
+from typing import TypeVar, Callable, Any, Iterable, Iterator, Tuple, cast
+from abc import abstractmethod, ABC
 from itertools import chain
+
+from zpy.bases import Applicative, Cartesian, Functor
+from zpy.operators import add, mul
 
 T = TypeVar("T")
 U = TypeVar("U")
 V = TypeVar("V")
 
-_map = map
-_filter = filter
-_reduce = reduce
-_pow = pow
 
-def map(f: Callable[[T], U]) -> "Callable[[Functor[T]], Functor[U]]":
-    return Function(lambda a: a.map(f))
-
-def filter(f: Callable[[T], bool]) -> "Callable[[Functor[T]], Functor[T]]":
-    return Function(lambda a: a.filter(f))
-
-def reduce(i: U, f: Callable[[U, T], U]) -> "Callable[[Functor[T]], U]":
-    return Function(lambda a: a.reduce(i, f))
-
-def apply(f: "Applicative[Callable[[T], U]]") -> "Callable[[Applicative[T], Applicative[U]]":
-    return Function(lambda a: a.apply(f))
-    
-foldl = reduce
-
-def compose(*f):
-    return Array(f).reduce(identity, Function(lambda f, g: Function(lambda x: f(g(x)))))
-
-def pipe(*f):
-    return compose(*reversed(f))
-
-class Functor(Generic[T]):
-    @abstractmethod
-    def map(self, f: Callable[[T], U]) -> "Functor[U]":
-        ...
-        
-class Applicative(Functor[T]):
-    @classmethod
-    @abstractmethod
-    def pure(cls, m: T) -> "Applicative[T]":
-        ...
-
-    @abstractmethod
-    def apply(self, f: "Functor[Callable[[T], U]]") -> "Applicative[U]":
-        ...
-        
-    def map(self, f: Callable[[T], U]) -> "Applicative[U]":
-        return apply(type(self).pure(f))(self)
-    
-
-class Function(Applicative[T], Generic[T, U]):
-    def __init__(self, f: Callable[[T], U]):
-        self.f = f
-        
-    def __call__(self, x: T, *rest) -> U:
-        return self.f(x, *rest)
-    
-    @classmethod
-    def pure(cls, m: U) -> "Function[Any, U]":
-        return cls(const(m))
-
-    def map(self, f: Callable[[U], V]) -> "Function[T, V]":
-        return type(self)(compose(f, self))
-        
-    def apply(self, ft: "Functor[[Callable[U, V]]]") -> "Function[T, V]":
-        return type(self)(lambda x: ft.map(type(self)(lambda f: f(x))))
-
-class Array(Applicative[T], list):
+class Array(Applicative[T], Cartesian[T], list):
     @classmethod
     def pure(cls, m: T) -> "Array[T]":
         return cls([m])
@@ -78,50 +20,101 @@ class Array(Applicative[T], list):
         return cls(args)
 
     def map(self, f: Callable[[T], U]) -> "Array[U]":
-        return type(self)(_map(f, self))
+        cls = type(self)
+        return cls(_map(f, self))
     
+    def product(self, f: "Array[U]") -> "Array[Tuple[T, U]]":
+        cls = type(self)
+        return cls(cast(Array[Tuple[T, U]], _product(self, f)))
+
     def reduce(self, i: U, f: Callable[[U, T], U]) -> U:
         return _reduce(f, self, i)
 
-    def apply(self, ft: "Functor[T]") -> "Array[U]":
-        return self.reduce(Array(), lambda a, fb: Array(chain(a, ft.map(lambda t: fb(t)))))
+    def apply(self, ft: "Functor[U]") -> "Array[U]":
+        return self.reduce(Array(), lambda a, f: Array(chain(a, ft.map(lambda t: f(t)))))
         
     def __repr__(self):
         return f"{type(self).__name__}({super().__repr__()})"
 
 
-@Function
-def identity(a: T) -> T:
-    return a
+class Maybe(Applicative[T], Iterable[T], ABC):
+    @abstractmethod
+    def map(self, f: Callable[[T], U]) -> "Maybe[U]":
+        ...
 
-@Function
-def const(a: T) -> Callable[["Any"], T]:
-    return Function(lambda _: a)
+    @abstractmethod
+    def apply(self, ff: "Maybe[Callable[[T], U]]") -> "Callable[[Maybe[T]], Maybe[U]]":
+        ...
 
-@Function
-def fork(join):
-    return Function(lambda f: lambda g: lambda x: join(f(x))(g(x)))
+    @classmethod
+    def pure(cls, m: T) -> "Maybe[T]":
+        return Just(m)
 
-@Function
-def tap(opr):
-    return Function(lambda x: fork(const)(identity)(opr)(x))
-
-@Function
-def trace(x):
-    print(x)
-    
+    @classmethod
+    def of(cls, m: T) -> "Maybe[T]":
+        return cls.pure(m)
 
 
-add = Function(lambda a: Function(lambda b: a + b))
-sub = Function(lambda a: Function(lambda b: a - b))
-mul = Function(lambda a: Function(lambda b: a * b))
-pow = Function(lambda a: Function(lambda b: _pow(a, b)))
-        
+class Just(Maybe[T]):
+    def __init__(self, m: T):
+        self.m = m
+
+    @classmethod
+    def pure(cls, m: T) -> "Just[T]":
+        return cls(m)
+
+    @classmethod
+    def of(cls, m: T, *_args) -> "Just[T]":
+        return cls.pure(m)
+
+    def __iter__(self) -> Iterator[T]:
+        return iter([self.m])
+
+    def map(self, f: Callable[[T], U]) -> "Just[U]":
+        cls = type(self)
+        return cls(f(self.m))
+
+    def apply(self, f: "Just[U]") -> "Just[V]":
+        cls = type(self)
+        return cls(f.map(self.m))
+
+    def __repr__(self):
+        cls = type(self)
+        return f"{cls.__name__}({repr(self.m)})"
 
 
-a = Array.pure(1)
-add_1 = Function(add(1))
-mul_4 = Function(mul(4))
+class Nothing(Maybe[Any]):
+    __instance = None
 
-print(map(add_1)(Array.of(2)))
-print(apply()))
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance:
+            return cls.__instance
+        cls.__instance = super().__init__()
+
+    @classmethod
+    def pure(cls, _m: T) -> "Nothing":
+        return cls()
+
+    def __iter__(self) -> Iterator[Any]:
+        return iter([])
+
+    def map(self, _f: Callable[[Any], Any]) -> "Nothing":
+        return self
+
+    def apply(self, ff: "Apply[Callable[[T], U]]") -> "Nothing":
+        return self
+
+    def __repr__(self):
+        return "Nothing()"
+
+
+if __name__ == "__main__":
+    a = Array.pure(1)
+    add_1 = add(1)
+    mul_4 = mul(4)
+
+    # print(Array.pure(add).apply(Array.of(1, 2)).apply(Array.of(1)))
+    # print(Just(1).map(add))
+    # print(Just.pure(add).apply(Just(1)))
+    print(add)
+    print(add_1)
