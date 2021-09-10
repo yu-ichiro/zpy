@@ -12,11 +12,11 @@ U = TypeVar("U")
 V = TypeVar("V")
 
 
-_map = map
-_filter = filter
-_reduce = reduce
-_pow = pow
-_product = product
+builtin_map = map
+builtin_filter = filter
+builtin_reduce = reduce
+builtin_pow = pow
+builtin_product = product
 
 
 @Function
@@ -85,15 +85,6 @@ def trace(x):
     print(x)
 
 
-__all__ = ['abs', 'add', 'and_', 'attrgetter', 'concat', 'contains', 'countOf',
-           'delitem', 'eq', 'floordiv', 'ge', 'getitem', 'gt', 'iadd', 'iand',
-           'iconcat', 'ifloordiv', 'ilshift', 'imatmul', 'imod', 'imul',
-           'index', 'indexOf', 'inv', 'invert', 'ior', 'ipow', 'irshift',
-           'is_', 'is_not', 'isub', 'itemgetter', 'itruediv', 'ixor', 'le',
-           'length_hint', 'lshift', 'lt', 'matmul', 'methodcaller', 'mod',
-           'mul', 'ne', 'neg', 'not_', 'or_', 'pos', 'pow', 'rshift',
-           'setitem', 'sub', 'truediv', 'truth', 'xor']
-
 unary = Signature([
     Parameter(name="a", kind=Parameter.POSITIONAL_ONLY)
 ])
@@ -126,7 +117,7 @@ floordiv = Function(op.floordiv, signature_=binary)
 mod = Function(op.mod, signature_=binary)
 matmul = Function(op.matmul, signature_=binary)
 divmod = Function(divmod, signature_=binary)
-pow = Function(_pow)
+pow = Function(builtin_pow)
 
 iadd = Function(op.iadd, signature_=binary)
 isub = Function(op.isub, signature_=binary)
