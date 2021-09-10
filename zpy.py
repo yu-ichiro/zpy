@@ -4,15 +4,19 @@ from itertools import chain
 
 from zpy.bases import Applicative, Cartesian, Functor
 from zpy.function import Function
-from zpy.operators import add, mul, map, apply
+from zpy.operators import add, mul, map, apply, builtin_map, builtin_product, builtin_reduce
 
 T = TypeVar("T")
 U = TypeVar("U")
 V = TypeVar("V")
 
+_empty = object()
+
 
 class Array(Applicative[T], Cartesian[T], list):
-    def __new__(cls, iter_: Iterable[T]):
+    def __new__(cls, iter_: Iterable[T] = _empty):
+        if iter_ is _empty:
+            return list.__new__(cls)
         return list.__new__(cls, iter_)
 
     @classmethod
@@ -25,16 +29,16 @@ class Array(Applicative[T], Cartesian[T], list):
 
     def map(self, f: Callable[[T], U]) -> "Array[U]":
         cls = type(self)
-        return cls(_map(f, self))
+        return cls(builtin_map(f, self))
     
     def product(self, f: "Array[U]") -> "Array[Tuple[T, U]]":
         cls = type(self)
-        return cls(cast(Array[Tuple[T, U]], _product(self, f)))
+        return cls(cast(Array[Tuple[T, U]], builtin_product(self, f)))
 
     def reduce(self, i: U, f: Callable[[U, T], U]) -> U:
-        return _reduce(f, self, i)
+        return builtin_reduce(f, self, i)
 
-    def apply(self, ft: "Functor[U]") -> "Array[U]":
+    def apply(self: "Array[Callable[[T], U]]", ft: "Array[T]") -> "Array[U]":
         return self.reduce(Array(), lambda a, f: Array(chain(a, ft.map(lambda t: f(t)))))
         
     def __repr__(self):
@@ -128,3 +132,4 @@ if __name__ == "__main__":
     print(add_1 / mul_4 / Just(5))
     print(add / Just(3) * Just(5))
     print(Just(add) * Just(3) * Just(5))
+    print(add / Array.of(1, 2, 3) * Array.of(3, 6))
