@@ -166,7 +166,7 @@ _ = UnderBar()
 
 
 class When(Generic[T, U]):
-    def __init__(self, m: Any, expr_func: Callable[[Any, ...], U]):
+    def __init__(self, m: Any, expr_func: Callable[[Any], U]):
         self.m = re.compile(re.sub(UnderBar.pattern, r"(?<![a-zA-Z0-9])(.+)(?![a-zA-Z0-9])", repr(m)))
         self.f = Function(expr_func)
 
