@@ -1,9 +1,9 @@
 from inspect import Signature, Parameter
 from itertools import product
 from functools import reduce
-from typing import Callable, TypeVar, Any
+from typing import Callable, TypeVar, Any, Tuple
 
-from zpy.bases import Functor
+from zpy.classes.bases import Functor, Apply, Cartesian
 from zpy.function import Function
 import operator as op
 
@@ -20,27 +20,27 @@ builtin_product = product
 
 
 @Function
-def map(f: Callable[[T], U]) -> "Callable[[Functor[T]], Functor[U]]":
+def map(f: Callable[[T], U]) -> Callable[[Functor[T]], Functor[U]]:
     return Function(lambda a: a.map(f))
 
 
 @Function
-def filter(f: Callable[[T], bool]) -> "Callable[[Functor[T]], Functor[T]]":
+def filter(f: Callable[[T], bool]) -> Callable[[Functor[T]], Functor[T]]:
     return Function(lambda a: a.filter(f))
 
 
 @Function
-def reduce(i: U, f: Callable[[U, T], U]) -> "Callable[[Functor[T]], U]":
+def reduce(i: U, f: Callable[[U, T], U]) -> Callable[[Functor[T]], U]:
     return Function(lambda a: a.reduce(i, f))
 
 
 @Function
-def apply(f: "Applicative[Callable[[T], U]]") -> "Callable[[Applicative[T]], Applicative[U]]":
+def apply(f: Apply[Callable[[T], U]]) -> Callable[[Apply[T]], Apply[U]]:
     return Function(lambda a: f.apply(a))
 
 
 @Function
-def product(f: "Cartesian[U]") -> "Callable[[Cartesian[T]], Cartesian[Tuple[T, U]]]":
+def product(f: Cartesian[U]) -> Callable[[Cartesian[T]], Cartesian[Tuple[T, U]]]:
     return Function(lambda a: a.product(f))
 
 
