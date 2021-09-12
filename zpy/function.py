@@ -1,11 +1,11 @@
+import re
 import warnings
 from collections import deque
-from enum import IntEnum
 from inspect import signature
 from functools import partial
-from typing import TypeVar, Callable, Any
+from typing import TypeVar, Callable, Any, Generic
 
-from zpy.bases import Functor
+from zpy.classes.bases import Functor
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -148,3 +148,59 @@ class Function(Functor[T]):
             name=f"{self.__name__}{self.__applied_args__} * {f.__name__}{f.__applied_args__}"
         )
 
+
+class UnderBar:
+    _instance = None
+    pattern = re.compile(r"(?<![a-zA-Z0-9])_(?![a-zA-Z0-9])")
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self):
+        return "_"
+
+
+_ = UnderBar()
+
+
+class When(Generic[T, U]):
+    def __init__(self, m: Any, expr_func: Callable[[Any, ...], U]):
+        self.m = re.compile(re.sub(UnderBar.pattern, r"(?<![a-zA-Z0-9])(.+)(?![a-zA-Z0-9])", repr(m)))
+        self.f = Function(expr_func)
+
+    def matches(self, pattern: str):
+        return self.m.match(pattern)
+
+    def __contains__(self, item: T):
+        return self.matches(repr(item))
+
+
+class Case(Generic[T, U]):
+    def __init__(self, *patterns: When[T, U]):
+        self.patterns = deque(patterns)
+        self._cache = {}
+
+    def append(self, pattern: When[T, U]):
+        self.patterns.append(pattern)
+
+    def prepend(self, pattern: When[T, U]):
+        self.patterns.appendleft(pattern)
+
+    def __call__(self, case: T) -> U:
+        case_repr = repr(case)
+        if case_repr not in self._cache:
+            for pattern in self.patterns:
+                if pattern.matches(case_repr):
+                    self._cache[case_repr] = pattern.f(case)
+                    break
+            else:
+                raise NotImplementedError(f"Unknown Case: {case}")
+        return self._cache[case_repr]
+
+    def __or__(self, other):
+        if isinstance(other, When):
+            self.append(other)
+            return self
+        return type(other).__ror__(other, self)
