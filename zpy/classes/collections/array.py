@@ -41,3 +41,6 @@ class Array(Applicative[T], Cartesian[T], list):
 
     def __repr__(self):
         return f"{type(self).__name__}({super().__repr__()})"
+
+    def swap(self, x: int, y: int):
+        self[x], self[y] = self[y], self[x]
