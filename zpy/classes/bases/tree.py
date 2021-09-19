@@ -170,3 +170,12 @@ class Tree(Generic[T], Pretty, ABC):
                     print(BoxPart.LEFT if edges[x - 1][y] & BoxPart.RIGHT else BoxPart.EMPTY, end="")
                 print(f"{{:>{col_widths[x]}}}".format(col), end="")
             print()
+
+
+class Forest(Generic[T], Pretty, ABC):
+    @abstractmethod
+    def trees(self) -> Iterable[Tree[T]]:
+        ...
+
+    def __pretty__(self):
+        return "\n".join(map(repr, self.trees()))
