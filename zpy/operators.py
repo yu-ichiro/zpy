@@ -4,6 +4,7 @@ from functools import reduce
 from typing import Callable, TypeVar, Any, Tuple
 
 from zpy.classes.bases import Functor, Apply, Cartesian
+from zpy.classes.bases.utility.pretty import Pretty
 from zpy.function import Function
 import operator as op
 
@@ -42,6 +43,16 @@ def apply(f: Apply[Callable[[T], U]]) -> Callable[[Apply[T]], Apply[U]]:
 @Function
 def product(f: Cartesian[U]) -> Callable[[Cartesian[T]], Cartesian[Tuple[T, U]]]:
     return Function(lambda a: a.product(f))
+
+
+@Function
+def pretty(ins: Pretty) -> str:
+    return type(ins).__pretty__(ins)
+
+
+@Function
+def pretty_print(ins: Pretty):
+    print(pretty(ins))
 
 
 fold_left = reduce

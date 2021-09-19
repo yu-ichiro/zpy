@@ -157,19 +157,22 @@ class Tree(Generic[T], Pretty, ABC):
             print()
             return
         cols[-1] = cols[-1] + [""] * (len(cols[0]) - len(cols[-1]))
-        edges[-1] = edges[-1] + [BoxPart.EMPTY] * (len(edges[0]) - len(edges[-1]))
+        if edges:
+            edges[-1] = edges[-1] + [BoxPart.EMPTY] * (len(edges[0]) - len(edges[-1]))
         col_widths = [
             max(map(len, col))
             for col in cols
         ]
+        result = ""
         for y, row in enumerate(zip(*cols)):
             for x, col in enumerate(row):
                 if x > 0:
-                    print(BoxPart.RIGHT if edges[x-1][y] & BoxPart.LEFT else BoxPart.EMPTY, end="")
-                    print(edges[x-1][y], end="")
-                    print(BoxPart.LEFT if edges[x - 1][y] & BoxPart.RIGHT else BoxPart.EMPTY, end="")
-                print(f"{{:>{col_widths[x]}}}".format(col), end="")
-            print()
+                    result += str(BoxPart.RIGHT if edges[x-1][y] & BoxPart.LEFT else BoxPart.EMPTY)
+                    result += str(edges[x-1][y])
+                    result += str(BoxPart.LEFT if edges[x - 1][y] & BoxPart.RIGHT else BoxPart.EMPTY)
+                result += f"{{:>{col_widths[x]}}}".format(col)
+            result += "\n"
+        return result[:-1]
 
 
 class Forest(Generic[T], Pretty, ABC):
@@ -178,4 +181,4 @@ class Forest(Generic[T], Pretty, ABC):
         ...
 
     def __pretty__(self):
-        return "\n".join(map(repr, self.trees()))
+        return "\n".join(map(lambda tree: type(tree).__pretty__(tree), self.trees()))
