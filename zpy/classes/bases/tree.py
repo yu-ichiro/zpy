@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass
 from enum import IntFlag
-from typing import Generic, Callable, List, TypeVar
+from typing import Generic, Callable, List, TypeVar, Iterable
 
 from zpy.classes.bases.utility.pretty import Pretty
 from zpy.classes.collections.array import Array
@@ -21,6 +21,7 @@ class TraverseState(Generic[T]):
 
 
 class BoxPart(IntFlag):
+    EMPTY = 0
     TOP = 1 << 0
     BOTTOM = 1 << 1
     LEFT = 1 << 2
@@ -87,7 +88,7 @@ class Tree(Generic[T], Pretty, ABC):
     def __getitem__(self, idx: int) -> T:
         ...
 
-    def bfs(self, action: Callable[[TraverseState[T]], bool] = const(True)):
+    def bfs(self, check: Callable[[TraverseState[T]], bool] = const(True)):
         if not self.root():
             return
         root = self.root_idx()
@@ -97,92 +98,75 @@ class Tree(Generic[T], Pretty, ABC):
             current = queue.popleft()
             depth = depth_queue.popleft()
             state = TraverseState(index=current, item=self[current], depth=depth)
-            if not action(state):
-                break
+            if not check(state):
+                return state
             for child in self.children_idx(current):
                 if not self.get(child):
                     continue
                 queue.append(child)
                 depth_queue.append(depth + 1)
 
-    def dfs(self, action: Callable[[TraverseState[T]], bool] = const(True)):
+    def dfs(self, check: Callable[[TraverseState[T]], bool] = const(True)):
         if not self.root():
             return
 
         def traverse(idx: int, depth=0):
             state = TraverseState(index=idx, item=self[idx], depth=depth)
-            if not action(state):
-                return
+            if check(state):
+                print(state)
+                return state
             for child in self.children_idx(idx):
                 if not self.get(child):
                     continue
                 traverse(child, depth + 1)
 
-        traverse(self.root_idx())
+        return traverse(self.root_idx())
 
     def __pretty__(self):
         cols: List[List[str]] = []
-        spaced_cols: List[List[str]] = []
+        edges: List[List[BoxPart]] = []
 
         def action(state: TraverseState[T]):
-            if state.depth == len(spaced_cols):
+            if state.depth == len(cols):
                 cols.append([])
-                spaced_cols.append([])
+            if state.depth - 1 == len(edges):
+                edges.append([])
             cols[state.depth].append(repr(state.item))
-            spaced_cols[state.depth].append(repr(state.item))
+            if self.parent(state.index):
+                edges[state.depth - 1].append(BoxPart.RIGHT)
             if self.parent(state.index) and self.children_idx(self.parent_idx(state.index))[0] == state.index:
-                return True
+                edges[state.depth - 1][-1] |= BoxPart.LEFT
+                return False
+            elif self.parent(state.index):
+                edges[state.depth - 1][-1] |= BoxPart.TOP
+                edges_len = len(edges[state.depth - 1])
+                for i in range(edges_len-2, -1, -1):
+                    edges[state.depth - 1][i] |= BoxPart.BOTTOM
+                    if edges[state.depth - 1][i] & BoxPart.LEFT:
+                        break
+                    else:
+                        edges[state.depth - 1][i] |= BoxPart.TOP
             for i in range(state.depth):
-                spaced_cols[i].append("")
-            return True
+                cols[i].append("")
+            for i in range(state.depth-1):
+                edges[i].append(BoxPart.EMPTY)
+            return False
 
         self.dfs(action)
         if not cols:
             print()
             return
-        spaced_cols[-1] = spaced_cols[-1] + [""] * (len(spaced_cols[0]) - len(spaced_cols[-1]))
+        cols[-1] = cols[-1] + [""] * (len(cols[0]) - len(cols[-1]))
+        edges[-1] = edges[-1] + [BoxPart.EMPTY] * (len(edges[0]) - len(edges[-1]))
         col_widths = [
             max(map(len, col))
-            for col in spaced_cols
+            for col in cols
         ]
-        count = [0 for _ in range(len(cols))]
-        for y, row in enumerate(zip(*spaced_cols)):
-            is_bottom_end = y == len(spaced_cols[0]) - 1
-            for x, item in enumerate(row):
-                is_left_end = x == 0
-                is_right_end = x == len(spaced_cols) - 1
-                has_left = not is_left_end and bool(spaced_cols[x-1][y])
-                not_empty = bool(spaced_cols[x][y])
-                if not is_left_end and count[x] < len(cols[x]):
-                    bars = ""
-                    should_corner = is_bottom_end or bool(spaced_cols[x-1][y+1]) or count[x] + 1 == len(cols[x])
-                    if has_left and should_corner:
-                        bars += "─"
-                    elif has_left:
-                        bars += "┬"
-                    elif not_empty and not should_corner:
-                        bars += "├"
-                    elif not_empty and should_corner:
-                        bars += "└"
-                    else:
-                        bars += "│"
-                    if not_empty:
-                        bars += "╴"
-                    else:
-                        bars += " "
-                    print(bars, end="")
-                elif not is_left_end:
-                    print("  ", end="")
-                print(f"{{:>{col_widths[x]}}}".format(item), end="")
-                if not is_right_end and count[x+1] < len(cols[x+1]):
-                    bars = ""
-                    if not_empty:
-                        bars += "╶"
-                    else:
-                        bars += " "
-                    print(bars, end="")
-                elif not is_right_end:
-                    print(" ", end="")
-                if not_empty:
-                    count[x] += 1
+        for y, row in enumerate(zip(*cols)):
+            for x, col in enumerate(row):
+                if x > 0:
+                    print(BoxPart.RIGHT if edges[x-1][y] & BoxPart.LEFT else BoxPart.EMPTY, end="")
+                    print(edges[x-1][y], end="")
+                    print(BoxPart.LEFT if edges[x - 1][y] & BoxPart.RIGHT else BoxPart.EMPTY, end="")
+                print(f"{{:>{col_widths[x]}}}".format(col), end="")
             print()
