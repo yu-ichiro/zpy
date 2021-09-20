@@ -21,9 +21,7 @@ class UnionFind(Forest[T]):
             return Just(parent_idx)
 
         def children(self, idx: int) -> Array[T]:
-            if idx not in self.children_dict:
-                return Array()
-            return self.children_dict[idx]
+            return Array(self.uf.children(idx))
 
         def root_idx(self) -> int:
             return self._root_idx
@@ -48,16 +46,12 @@ class UnionFind(Forest[T]):
         def __init__(self, uf: "UnionFind[T]", root: int):
             self._root_idx = root
             self.uf = uf
-            self.children_dict = defaultdict(Array)
-            for idx, link in enumerate(self.uf._uf):
-                self.children_dict[link].append(idx)
 
     def __init__(self, n):
         self.n = n
         self._uf = Array(repeat(-1, times=self.n))
         self._ranks = Array(repeat(1, times=self.n))
-        self._cached = set()
-        self._trees = {}
+        self._children = Array([set() for _ in range(self.n)])
         self.roots = set(range(self.n))
 
     def root(self, x):
@@ -65,13 +59,22 @@ class UnionFind(Forest[T]):
             return x
         return self.root(self._uf[x])
 
+    def parent(self, x):
+        if self._uf[x] < 0:
+            return x
+        return self._uf[x]
+
+    def children(self, x):
+        return set(self._children[x])
+
     def flatten(self):
         for idx in range(self.n):
             root = self.root(idx)
             if root != idx:
+                parent = self.parent(idx)
                 self._uf[idx] = root
-        self._trees = {}
-        self._cached = set()
+                self._children[root].add(idx)
+                self._children[parent].remove(idx)
 
     def rank(self, x):
         return self._ranks[self.root(x)]
@@ -93,21 +96,12 @@ class UnionFind(Forest[T]):
         self._uf[x] += self._uf[y]
         self._uf[y] = x
         self.roots.remove(y)
-        if x in self._cached:
-            self._cached.remove(x)
-        if y in self._cached:
-            self._cached.remove(y)
-        if y in self._trees:
-            self._trees.pop(y)
+        self._children[x].add(y)
         if rank_x == rank_y:
             self._ranks[x] += 1
 
     def trees(self) -> Iterable[Tree[T]]:
-        roots_to_build = self.roots - self._cached
-        for root in roots_to_build:
-            self._trees[root] = self._UnionFindTree(self, root)
-            self._cached.add(root)
-        return Array(map(lambda r: self._trees[r], self.roots))
+        return Array(map(lambda r: self._UnionFindTree(self, r), self.roots))
 
     def __repr__(self):
         cls = type(self)
