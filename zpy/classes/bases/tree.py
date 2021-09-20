@@ -129,8 +129,13 @@ class Tree(Generic[T], Pretty, ABC):
         def action(state: TraverseState[T]):
             if state.depth == len(cols):
                 cols.append([])
+            for _ in range(len(cols[state.depth]), len(cols[0])-1):
+                cols[state.depth].append("")
             if state.depth - 1 == len(edges):
                 edges.append([])
+            if edges:
+                for _ in range(len(edges[state.depth-1]), len(edges[0])-1):
+                    edges[state.depth-1].append(BoxPart.EMPTY)
             cols[state.depth].append(repr(state.item))
             if self.parent(state.index):
                 edges[state.depth - 1].append(BoxPart.RIGHT)
@@ -156,9 +161,11 @@ class Tree(Generic[T], Pretty, ABC):
         if not cols:
             print()
             return
-        cols[-1] = cols[-1] + [""] * (len(cols[0]) - len(cols[-1]))
-        if edges:
-            edges[-1] = edges[-1] + [BoxPart.EMPTY] * (len(edges[0]) - len(edges[-1]))
+        for col in cols[1:]:
+            col += [""] * (len(cols[0]) - len(col))
+        for edge in edges:
+            edge += [BoxPart.EMPTY] * (len(cols[0]) - len(edge))
+
         col_widths = [
             max(map(len, col))
             for col in cols
